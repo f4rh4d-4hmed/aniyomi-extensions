@@ -1,0 +1,44 @@
+name: Build Single Extension
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  build_single:
+    name: Build HiAnime extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Create dummy signing key
+        run: |
+          keytool -genkey -v -keystore signingkey.jks -alias key -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build HiAnime extension
+        env:
+          ALIAS: key
+          KEY_STORE_PASSWORD: android
+          KEY_PASSWORD: android
+        run: chmod +x ./gradlew && ./gradlew :src:en:zoro:assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: "hianime-apk"
+          path: "src/en/zoro/build/outputs/apk/release/*.apk"
+          retention-days: 7
+
+      - name: Clean up CI files
+        run: rm signingkey.jks
